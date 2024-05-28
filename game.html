@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Guessing Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f7f7f7;
+      background-image: url('https://cdn.gamedevmarket.net/wp-content/uploads/20191203191657/Work-2.jpg');
+    }
+    h1 {
+      font-size: 24px;
+      color: #3498db;
+      margin-bottom: 20px;
+    }
+    .container {
+      position: relative;
+      text-align: left;
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1);
+    }
+    input[type="text"], button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      background-color: #f9ca24;
+      border: none;
+      color: #ffffff;
+      border-radius: 5px;
+    }
+    #guessInput {
+      width: 30px;
+    }
+    button {
+      cursor: pointer;
+      background-color: #3498db;
+    }
+    #result {
+      margin-top: 10px;
+    }
+    .grid-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .grid-item {
+      background-color: #3498db;
+      padding: 10px;
+      text-align: center;
+      margin: 0 5px;
+      border-radius: 5px;
+      color: #fff;
+    }
+    .hint {
+      margin-top: 20px;
+      color: #f9ca24;
+    }
+    .side-area {
+      background-color: #f9ca24;
+      color: #333;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    .side-area h2 {
+      margin-top: 0;
+      color: #3498db;
+    }
+    .incorrect-guesses {
+      margin-top: 20px;
+    }
+    .incorrect-guesses span {
+      font-size: 20px;
+      color: red;
+      margin: 0 5px;
+    }
+    .score-card {
+      position: absolute;
+      bottom: 140px;
+      right: 10px;
+      z-index: 1;
+    }
+
+    .score-card-content {
+      background-color: #f9ca24;
+      padding: 5px 10px;
+      border-radius: 5px;
+      text-align: right;
+    }
+
+    .score-card h2 {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .score-card p {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .timer {
+      font-size: 18px;
+      color: #e74c3c;
+      margin-top: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Word Guessing Game</h1>
+    <div class="score-card">
+      <div class="score-card-content">
+        <h2>Score</h2>
+        <p>P1: <span id="player1Score">0</span></p>
+        <p>P2: <span id="player2Score">0</span></p>
+      </div>
+    </div>
+    <div id="player1">
+      <p>Player 1, enter a word:</p>
+      <input type="text" id="wordInput">
+      <p>Enter a hint:</p>
+      <input type="text" id="hintInput">
+      <button onclick="startGame()">Start Game</button>
+    </div>
+
+    <div id="player2" style="display: none;">
+      <p>Player 2, guess the word one letter at a time:</p>
+      <input type="text" id="guessInput" maxlength="1">
+      <button onclick="checkLetter()">Guess Letter</button>
+      <div class="hint" id="hint"></div>
+      <div class="grid-container" id="guessedLetters"></div>
+      <div class="incorrect-guesses" id="incorrectGuesses"></div>
+      <div class="timer" id="timer"></div>
+    </div>
+
+    <div id="result" style="display: none;">
+      <h2>Result:</h2>
+      <p id="winner"></p>
+      <button onclick="startNextRound()">Start Next Round</button>
+    </div>
+  </div>
+
+  <div class="side-area">
+    <h2>Game Instructions</h2>
+    <p>Welcome to the Word Guessing Game!</p>
+    <p>Player 1 will enter a word and provide a hint.</p>
+    <p>Player 2 will guess the word one letter at a time.</p>
+    <p>The game alternates between players for guessing.</p>
+    <p>Guess the word correctly to score a point.</p>
+  </div>
+
+  <script>
+    let wordToGuess = "";
+    let guessedWord = "";
+    let player1Score = 0;
+    let player2Score = 0;
+    let hintUsed = false;
+    let currentPlayer = 1;
+    let incorrectGuessesPlayer1 = 0;
+    let incorrectGuessesPlayer2 = 0;
+    const maxIncorrectGuesses = 3;
+    let timer;
+    const timeLimit = 100; // seconds
+
+    function startGame() {
+      wordToGuess = document.getElementById("wordInput").value.trim().toLowerCase();
+      const hint = document.getElementById("hintInput").value.trim();
+      if (wordToGuess === "") {
+        alert("Please enter a word.");
+        return;
+      }
+      guessedWord = "_".repeat(wordToGuess.length);
+      document.getElementById("player1").style.display = "none";
+      document.getElementById("player2").style.display = "block";
+      document.getElementById("hint").innerHTML = `<p class="hint">Hint: ${hint}</p>`;
+      document.getElementById("hintInput").disabled = true;
+      startTimer();
+      renderGuessedWord();
+    }
+
+    function startTimer() {
+      let timeRemaining = timeLimit;
+      document.getElementById("timer").innerText = `Time left: ${timeRemaining}s`;
+      timer = setInterval(() => {
+        timeRemaining--;
+        document.getElementById("timer").innerText = `Time left: ${timeRemaining}s`;
+        if (timeRemaining <= 0) {
+          clearInterval(timer);
+          if (currentPlayer === 1) {
+            document.getElementById("winner").innerText = "Player 2 wins! Time's up.";
+          } else {
+            document.getElementById("winner").innerText = "Player 1 wins! Time's up.";
+          }
+          endGame();
+        }
+      }, 1000);
+    }
+
+    function checkLetter() {
+      const guess = document.getElementById("guessInput").value.trim().toLowerCase();
+      if (guess.length !== 1 || !guess.match(/[a-z]/i)) {
+        alert("Please enter a valid letter.");
+        return;
+      }
+      if (wordToGuess.includes(guess)) {
+        updateGuessedWord(guess);
+        if (guessedWord === wordToGuess) {
+          clearInterval(timer);
+          if (currentPlayer === 1) {
+            player1Score++;
+          } else {
+            player2Score++;
+          }
+          document.getElementById("winner").innerText = `Player ${currentPlayer} wins!`;
+          endGame();
+        }
+      } else {
+        if (currentPlayer === 1) {
+          incorrectGuessesPlayer1++;
+          if (incorrectGuessesPlayer1 >= maxIncorrectGuesses) {
+            clearInterval(timer);
+            document.getElementById("winner").innerText = `Player 2 wins! Player 1 made too many incorrect guesses.`;
+            endGame();
+          }
+        } else {
+          incorrectGuessesPlayer2++;
+          if (incorrectGuessesPlayer2 >= maxIncorrectGuesses) {
+            clearInterval(timer);
+            document.getElementById("winner").innerText = `Player 1 wins! Player 2 made too many incorrect guesses.`;
+            endGame();
+          }
+        }
+        document.getElementById("incorrectGuesses").innerHTML += "<span>&#10060;</span>";
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+      }
+      document.getElementById("guessInput").value = "";
+      updateScores();
+      renderGuessedWord();
+    }
+
+    function updateGuessedWord(letter) {
+      let newGuessedWord = "";
+      for (let i = 0; i < wordToGuess.length; i++) {
+        if (wordToGuess[i] === letter) {
+          newGuessedWord += letter;
+        } else {
+          newGuessedWord += guessedWord[i];
+        }
+      }
+      guessedWord = newGuessedWord;
+    }
+
+    function renderGuessedWord() {
+      const guessedLettersContainer = document.getElementById("guessedLetters");
+      guessedLettersContainer.innerHTML = "";
+      for (let i = 0; i < guessedWord.length; i++) {
+        const gridItem = document.createElement("div");
+        gridItem.classList.add("grid-item");
+        gridItem.textContent = guessedWord[i];
+        guessedLettersContainer.appendChild(gridItem);
+      }
+    }
+
+    function updateScores() {
+      document.getElementById("player1Score").innerText = player1Score;
+      document.getElementById("player2Score").innerText = player2Score;
+    }
+
+    function startNextRound() {
+      clearInterval(timer);
+      document.getElementById("wordInput").value = "";
+      document.getElementById("hintInput").value = "";
+      document.getElementById("result").style.display = "none";
+      document.getElementById("player1").style.display = "block";
+      document.getElementById("player2").style.display = "none";
+      document.getElementById("hintInput").disabled = false;
+      wordToGuess = "";
+      guessedWord = "";
+      hintUsed = false;
+      currentPlayer = 1;
+      incorrectGuessesPlayer1 = 0;
+      incorrectGuessesPlayer2 = 0;
+      document.getElementById("incorrectGuesses").innerHTML = "";
+      document.getElementById("timer").innerText = "";
+      renderGuessedWord();
+    }
+
+    function endGame() {
+      document.getElementById("result").style.display = "block";
+    }
+  </script>
+</body>
+</html>
